@@ -2,6 +2,8 @@
 
 import streamlit as st
 from ocr_utils import load_image, ocr_image
+os.makedirs('.streamlit', exist_ok=True)
+import os
 
 st.set_page_config(page_title="Prescription OCR App", layout="centered")
 
