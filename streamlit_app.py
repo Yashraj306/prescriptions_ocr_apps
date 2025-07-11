@@ -1,10 +1,21 @@
-# app.py
+# streamlit_app.py
 
 import streamlit as st
 from ocr_utils import load_image, ocr_image
-os.makedirs('.streamlit', exist_ok=True)
 import os
 
+# ✅ FIX 1: Use user home directory for Streamlit config to avoid permission errors
+config_path = os.path.expanduser('~/.streamlit')
+os.makedirs(config_path, exist_ok=True)
+
+with open(os.path.join(config_path, 'config.toml'), 'w') as f:
+    f.write("""
+[server]
+headless = true
+enableCORS = false
+""")
+
+# ✅ Streamlit app starts here
 st.set_page_config(page_title="Prescription OCR App", layout="centered")
 
 st.title("📄 Medical Prescription OCR")
