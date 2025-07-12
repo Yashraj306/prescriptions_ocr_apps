@@ -5,6 +5,13 @@ from app import extract_text_and_info
 
 TEST_FOLDER = "test_images"
 OUTPUT_CSV = "ocr_test_results.csv"
+# Check if output CSV is locked (e.g., open in Excel)
+if os.path.exists(OUTPUT_CSV):
+    try:
+        os.rename(OUTPUT_CSV, OUTPUT_CSV)  # triggers error if file is locked
+    except PermissionError:
+        print("❌ Please close 'ocr_test_results.csv' before running the test.")
+        exit()
 
 # ✅ Run extraction for all images and log results
 with open(OUTPUT_CSV, "w", newline="") as csvfile:
