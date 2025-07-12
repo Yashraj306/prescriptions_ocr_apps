@@ -1,0 +1,23 @@
+Image,Diagnosis,Follow-Up,Advice,Med Count
+prescription 3.png,ERROR,ERROR,ERROR,"❌ OpenCV(4.12.0) D:\a\opencv-python\opencv-python\opencv\modules\imgproc\src\color.simd_helpers.hpp:92: error: (-15:Bad number of channels) in function '__cdecl cv::impl::`anonymous-namespace'::CvtHelper<struct cv::impl::`anonymous namespace'::Set<3,4,-1>,struct cv::impl::A0x31bd3f7f::Set<1,-1,-1>,struct cv::impl::A0x31bd3f7f::Set<0,2,5>,4>::CvtHelper(const class cv::_InputArray &,const class cv::_OutputArray &,int)'
+> Invalid number of channels in input image:
+>     'VScn::contains(scn)'
+> where
+>     'scn' is 1
+"
+prescription 4.jpg,⚠️ Diagnosis not found,⚠️ Date not detected,,1
+prescription.jpg,⚠️ Diagnosis not found,15-07-2019,,1
+prescription1.jpg,⚠️ Diagnosis not found,04-09-2023,TAKE BED REST DO NOT EAT OUTSIDE FOOD EAT EASY TO DIGEST FOOD LIKE BOILED RICE WITH DAAL,4
+prescription2.jpg,⚠️ Diagnosis not found,05-00-2040,cOMPLETE BED REST,1
+prescription5.png,ERROR,ERROR,ERROR,"❌ OpenCV(4.12.0) D:\a\opencv-python\opencv-python\opencv\modules\imgproc\src\color.simd_helpers.hpp:92: error: (-15:Bad number of channels) in function '__cdecl cv::impl::`anonymous-namespace'::CvtHelper<struct cv::impl::`anonymous namespace'::Set<3,4,-1>,struct cv::impl::A0x31bd3f7f::Set<1,-1,-1>,struct cv::impl::A0x31bd3f7f::Set<0,2,5>,4>::CvtHelper(const class cv::_InputArray &,const class cv::_OutputArray &,int)'
+> Invalid number of channels in input image:
+>     'VScn::contains(scn)'
+> where
+>     'scn' is 1
+"
+prescription6.png,ERROR,ERROR,ERROR,"❌ OpenCV(4.12.0) D:\a\opencv-python\opencv-python\opencv\modules\imgproc\src\color.simd_helpers.hpp:92: error: (-15:Bad number of channels) in function '__cdecl cv::impl::`anonymous-namespace'::CvtHelper<struct cv::impl::`anonymous namespace'::Set<3,4,-1>,struct cv::impl::A0x31bd3f7f::Set<1,-1,-1>,struct cv::impl::A0x31bd3f7f::Set<0,2,5>,4>::CvtHelper(const class cv::_InputArray &,const class cv::_OutputArray &,int)'
+> Invalid number of channels in input image:
+>     'VScn::contains(scn)'
+> where
+>     'scn' is 1
+"
