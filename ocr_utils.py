@@ -2,7 +2,7 @@ import easyocr
 import cv2
 import numpy as np
 from PIL import Image
-
+preprocess_image()
 # Add desired languages (example: English + Hindi + Marathi)
 reader = easyocr.Reader(['en', 'hi', 'mr'])
 
