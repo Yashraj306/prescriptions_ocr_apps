@@ -139,4 +139,5 @@ with gr.Blocks() as demo:
         outputs=[extracted_text, meds_df, diagnosis, advice, followup]
     )
 
-demo.launch()
+if __name__ == "__main__":
+    demo.launch()
