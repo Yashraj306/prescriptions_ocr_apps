@@ -1,14 +1,16 @@
+# app.py
+
 import gradio as gr
 from ocr_utils import load_image, ocr_image
 
-# 🩺 Global Healthcare Assistant UI
+# 💊 Prescription AI Assistant UI
 with gr.Blocks() as demo:
     gr.Markdown("""
     # 🩺 Global Prescription AI Assistant
     Upload a prescription image (handwritten/printed). We'll extract:
     - ✅ Medicines, Dosage, Duration
     - ✅ Diagnosis based on medicines
-    - ✅ Uses, Risks, Home Remedies
+    - ✅ Uses, Warnings, Home Remedies
     """)
 
     with gr.Row():
@@ -30,4 +32,4 @@ with gr.Blocks() as demo:
     )
 
 if __name__ == "__main__":
-    demo.launch()
+    demo.launch(share=True)  # Set share=True for remote access
