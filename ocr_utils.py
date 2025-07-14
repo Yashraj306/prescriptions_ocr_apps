@@ -1,3 +1,5 @@
+# ocr_utils.py
+
 import easyocr
 import cv2
 import numpy as np
@@ -6,20 +8,22 @@ import re
 import requests
 from fuzzywuzzy import process
 
-# Load OCR Reader
-reader = easyocr.Reader(['en', 'hi', 'mr'], gpu=False)
+# Load OCR Reader with multilingual support
+reader = easyocr.Reader(['en', 'hi', 'mr', 'kn', 'ta', 'gu', 'bn'], gpu=False)
 
-# Known global medicine names (extend or fetch dynamically)
+# Known global medicines (extendable)
 known_meds = [
-    "DOLO 650", "VOMILAST", "ZOCLAR", "CROCIN", "AZITHROMYCIN", "AMOXICILLIN", "METFORMIN", "PARACETAMOL",
-    "IBUPROFEN", "PANTOPRAZOLE", "DOXYCYCLINE", "CETRIZINE", "FOLIC ACID", "OMEGA 3", "ACECLOFENAC"
+    "DOLO 650", "VOMILAST", "ZOCLAR", "CROCIN", "AZITHROMYCIN", "AMOXICILLIN", "METFORMIN",
+    "PARACETAMOL", "IBUPROFEN", "PANTOPRAZOLE", "DOXYCYCLINE", "CETRIZINE", "FOLIC ACID",
+    "OMEGA 3", "ACECLOFENAC", "AUGMENTIN", "PAN D", "KETO", "ASPIRIN", "CODEINE", "WARFARIN",
+    "ENZFLAM", "HEXIGEL", "CANDID B", "VICKS", "SINAREST", "RANTAC", "KETOROL", "CETRIMIDE"
 ]
 
-# 🔍 Lookup medicine details via OpenFDA
+# 🔍 Get uses & warnings from FDA API
 def get_medicine_info_online(med_name):
     try:
         url = f"https://api.fda.gov/drug/label.json?search=openfda.brand_name:\"{med_name}\"&limit=1"
-        res = requests.get(url)
+        res = requests.get(url, timeout=5)
         data = res.json()
         use = data['results'][0].get('indications_and_usage', ['Not available'])[0]
         warn = data['results'][0].get('warnings', ['No warnings found'])[0]
@@ -27,22 +31,19 @@ def get_medicine_info_online(med_name):
     except:
         return "❌ No info found online", "❌ No warning found"
 
-# 🧼 Preprocessing
+# 🧼 Preprocess image for OCR
 def preprocess_image(pil_img):
     if pil_img.mode != "RGB":
         pil_img = pil_img.convert("RGB")
     img = np.array(pil_img)
     gray = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
     denoised = cv2.fastNlMeansDenoising(gray, h=30)
-    adaptive = cv2.adaptiveThreshold(
-        denoised, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
-        cv2.THRESH_BINARY, 31, 10
-    )
-    kernel = np.array([[0, -1, 0], [-1, 5, -1], [0, -1, 0]])
-    sharpened = cv2.filter2D(adaptive, -1, kernel)
+    adaptive = cv2.adaptiveThreshold(denoised, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
+                                     cv2.THRESH_BINARY, 31, 10)
+    sharpened = cv2.filter2D(adaptive, -1, np.array([[0, -1, 0], [-1, 5, -1], [0, -1, 0]]))
     return Image.fromarray(sharpened)
 
-# Resize small images
+# 📏 Resize image if too small
 def resize_image(image, min_width=1000):
     width, height = image.size
     if width < min_width:
@@ -50,7 +51,7 @@ def resize_image(image, min_width=1000):
         return image.resize((int(width * scale), int(height * scale)))
     return image
 
-# 🧠 Extract structured info
+# 🎯 Extract all structured info
 def extract_text_and_info(image):
     image = resize_image(image)
     image = preprocess_image(image)
@@ -92,11 +93,13 @@ def extract_text_and_info(image):
             diagnosis_set.add("Viral Fever")
         elif "VOMITING" in use.upper():
             diagnosis_set.add("Stomach Infection")
+        elif "ACIDITY" in use.upper():
+            diagnosis_set.add("Acid Reflux")
 
     diagnosis = ", ".join(diagnosis_set) if diagnosis_set else "⚠️ Diagnosis not found"
-    return meds, diagnosis, "\n".join(uses), "\n".join(risks), "🌿 Home remedies depend on diagnosis."
+    return meds, diagnosis, "\n".join(uses), "\n".join(risks), "🌿 Home remedies vary based on condition."
 
-# For Gradio
+# 👉 For Gradio
 def ocr_image(pil_img):
     return extract_text_and_info(pil_img)
 
