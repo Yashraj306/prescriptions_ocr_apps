@@ -1,9 +1,7 @@
 gradio
 easyocr
-numpy
-pandas
-opencv-python-headless
-Pillow
-requests
+pillow
 fuzzywuzzy
 python-Levenshtein
+requests
+opencv-python
