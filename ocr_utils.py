@@ -9,7 +9,8 @@ import requests
 from fuzzywuzzy import process
 
 # Load OCR Reader with multilingual support
-reader = easyocr.Reader(['en', 'hi', 'mr', 'kn', 'ta', 'gu', 'bn'], gpu=False)
+reader = easyocr.Reader(['en', 'hi', 'mr', 'kn', 'ta', 'bn'], gpu=False)
+
 
 # Known global medicines (extendable)
 known_meds = [
