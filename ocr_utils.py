@@ -1,14 +1,48 @@
 import easyocr
-import pytesseract
 import cv2
 import numpy as np
 from PIL import Image
-import warnings
+import re
+import requests
+from fuzzywuzzy import process
 
-# ✅ EasyOCR: Multilingual reader
+# Load OCR Reader
 reader = easyocr.Reader(['en', 'hi', 'mr'], gpu=False)
 
-# ✅ Resize large images for speed
+# Known global medicine names (extend or fetch dynamically)
+known_meds = [
+    "DOLO 650", "VOMILAST", "ZOCLAR", "CROCIN", "AZITHROMYCIN", "AMOXICILLIN", "METFORMIN", "PARACETAMOL",
+    "IBUPROFEN", "PANTOPRAZOLE", "DOXYCYCLINE", "CETRIZINE", "FOLIC ACID", "OMEGA 3", "ACECLOFENAC"
+]
+
+# 🔍 Lookup medicine details via OpenFDA
+def get_medicine_info_online(med_name):
+    try:
+        url = f"https://api.fda.gov/drug/label.json?search=openfda.brand_name:\"{med_name}\"&limit=1"
+        res = requests.get(url)
+        data = res.json()
+        use = data['results'][0].get('indications_and_usage', ['Not available'])[0]
+        warn = data['results'][0].get('warnings', ['No warnings found'])[0]
+        return use.strip(), warn.strip()
+    except:
+        return "❌ No info found online", "❌ No warning found"
+
+# 🧼 Preprocessing
+def preprocess_image(pil_img):
+    if pil_img.mode != "RGB":
+        pil_img = pil_img.convert("RGB")
+    img = np.array(pil_img)
+    gray = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
+    denoised = cv2.fastNlMeansDenoising(gray, h=30)
+    adaptive = cv2.adaptiveThreshold(
+        denoised, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
+        cv2.THRESH_BINARY, 31, 10
+    )
+    kernel = np.array([[0, -1, 0], [-1, 5, -1], [0, -1, 0]])
+    sharpened = cv2.filter2D(adaptive, -1, kernel)
+    return Image.fromarray(sharpened)
+
+# Resize small images
 def resize_image(image, min_width=1000):
     width, height = image.size
     if width < min_width:
@@ -16,81 +50,55 @@ def resize_image(image, min_width=1000):
         return image.resize((int(width * scale), int(height * scale)))
     return image
 
+# 🧠 Extract structured info
+def extract_text_and_info(image):
+    image = resize_image(image)
+    image = preprocess_image(image)
+    img_np = np.array(image)
+    results = reader.readtext(img_np)
+    lines = [res[1].strip() for res in results if res[1].strip()]
 
-# ✅ Image preprocessing: grayscale, denoise, adaptive threshold, sharpen
-def preprocess_image(pil_img, debug=False, filename="processed_debug.jpg"):
-    # Convert to RGB if needed
-    if pil_img.mode != "RGB":
-        pil_img = pil_img.convert("RGB")
+    meds = []
+    diagnosis_set = set()
+    uses, risks, remedies = [], [], []
 
-    img = np.array(pil_img)
-    gray = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
-    denoised = cv2.fastNlMeansDenoising(gray, h=30)
+    current = {}
+    for line in lines:
+        upper = line.upper()
+        if re.search(r"(TAB|CAP)[. ]", upper):
+            if current:
+                meds.append(current)
+            current = {"Medicine Name": upper.strip(), "Dosage": "", "Duration": ""}
+        elif any(kw in upper for kw in ["MORNING", "NIGHT", "AFTER FOOD"]):
+            current["Dosage"] += " " + upper.strip()
+        elif "DAYS" in upper:
+            match = re.search(r"\d+\s+DAYS", upper)
+            if match:
+                current["Duration"] = match.group()
+    if current:
+        meds.append(current)
 
-    # Adaptive Thresholding
-    adaptive = cv2.adaptiveThreshold(
-        denoised, 255,
-        cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
-        cv2.THRESH_BINARY,
-        31, 10
-    )
+    for m in meds:
+        raw = m["Medicine Name"].upper()
+        match, score = process.extractOne(raw, known_meds)
+        m["Matched Name"] = match if score > 75 else raw
 
-    # Sharpen
-    kernel = np.array([[0, -1, 0],
-                       [-1, 5, -1],
-                       [0, -1, 0]])
-    sharpened = cv2.filter2D(adaptive, -1, kernel)
+        use, warn = get_medicine_info_online(match)
+        uses.append(f"{match}: {use}")
+        risks.append(f"{match}: {warn}")
+        if "MALARIA" in use.upper():
+            diagnosis_set.add("Malaria")
+        elif "FEVER" in use.upper():
+            diagnosis_set.add("Viral Fever")
+        elif "VOMITING" in use.upper():
+            diagnosis_set.add("Stomach Infection")
 
-    # ✅ Save debug image if needed
-    if debug:
-        cv2.imwrite(filename, sharpened)
+    diagnosis = ", ".join(diagnosis_set) if diagnosis_set else "⚠️ Diagnosis not found"
+    return meds, diagnosis, "\n".join(uses), "\n".join(risks), "🌿 Home remedies depend on diagnosis."
 
-    return Image.fromarray(sharpened)
+# For Gradio
+def ocr_image(pil_img):
+    return extract_text_and_info(pil_img)
 
-# ✅ Load image from upload path or stream
-def load_image(image_file):
-    return Image.open(image_file)
-
-# ✅ Fallback OCR using pytesseract
-def tesseract_ocr(pil_img):
-    try:
-        text = pytesseract.image_to_string(pil_img)
-        return text.strip()
-    except Exception as e:
-        return f"Tesseract failed: {str(e)}"
-
-# ✅ Main OCR handler function
-def ocr_image(pil_image):
-    # Step 1: Resize for OCR accuracy
-    image = resize_image(pil_image, min_width=1000)
-
-    # Step 2: Preprocess and save debug image
-    processed = preprocess_image(image, debug=True, filename="processed_debug.jpg")
-
-    img = np.array(processed)
-
-    # Step 3: Try EasyOCR with paragraph detection
-    try:
-        results = reader.readtext(img, detail=1, paragraph=True)
-    except Exception as e:
-        print("⚠️ EasyOCR failed:", e)
-        results = []
-
-    # Step 4: Handle EasyOCR result
-    if results:
-        text = " ".join([res[1] for res in results])
-        conf = round(np.mean([res[2] for res in results]) * 100, 2)
-        langs = ", ".join(reader.lang_list)
-    else:
-        # Step 5: Fallback to Tesseract if EasyOCR fails
-        print("🔁 Using Tesseract fallback...")
-        text = pytesseract.image_to_string(processed, lang="eng+hin+mar")
-        conf = "N/A"
-        langs = "Fallback: Tesseract (eng+hin+mar)"
-
-    return {
-        "raw_results": results,
-        "text": text.strip(),
-        "confidence": conf,
-        "languages": langs
-    }
+def load_image(file):
+    return Image.open(file)
